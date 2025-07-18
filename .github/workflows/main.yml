@@ -1,0 +1,108 @@
+name: Selective Microservice Deployment to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_discovery:
+        description: 'Deploy Discovery Server?'
+        required: false
+        default: 'false'
+      deploy_customers:
+        description: 'Deploy Customers Service?'
+        required: false
+        default: 'false'
+      deploy_vets:
+        description: 'Deploy Vets Service?'
+        required: false
+        default: 'false'
+      deploy_visits:
+        description: 'Deploy Visits Service?'
+        required: false
+        default: 'false'
+      deploy_gateway:
+        description: 'Deploy API Gateway?'
+        required: false
+        default: 'false'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build all JARs
+        run: mvn clean package -DskipTests
+
+      - name: Prepare SSH key
+        run: |
+          echo "${{ secrets.EC2_KEY }}" > key.pem
+          chmod 400 key.pem
+
+      - name: Deploy Selected Services to EC2
+        run: |
+          echo "Uploading selected services..."
+          
+          # Discovery Server
+          if [ "${{ github.event.inputs.deploy_discovery }}" == "true" ]; then
+            echo "Deploying Discovery Server..."
+            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-discovery-server/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/discovery.jar
+          fi
+
+          # Customers Service
+          if [ "${{ github.event.inputs.deploy_customers }}" == "true" ]; then
+            echo "Deploying Customers Service..."
+            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-customers-service/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/customers.jar
+          fi
+
+          # Vets Service
+          if [ "${{ github.event.inputs.deploy_vets }}" == "true" ]; then
+            echo "Deploying Vets Service..."
+            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-vets-service/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/vets.jar
+          fi
+
+          # Visits Service
+          if [ "${{ github.event.inputs.deploy_visits }}" == "true" ]; then
+            echo "Deploying Visits Service..."
+            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-visits-service/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/visits.jar
+          fi
+
+          # API Gateway
+          if [ "${{ github.event.inputs.deploy_gateway }}" == "true" ]; then
+            echo "Deploying API Gateway..."
+            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-api-gateway/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/gateway.jar
+          fi
+
+      - name: Restart Selected Services on EC2
+        run: |
+          ssh -i key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            echo "Restarting selected services..."
+
+            # Kill all running JARs (optional - can be improved to target by name)
+            pkill -f '.jar' || true
+
+            sleep 5
+
+            if [[ "${{ github.event.inputs.deploy_discovery }}" == "true" ]]; then
+              nohup java -jar discovery.jar > discovery.log 2>&1 &
+            fi
+            if [[ "${{ github.event.inputs.deploy_customers }}" == "true" ]]; then
+              nohup java -jar customers.jar > customers.log 2>&1 &
+            fi
+            if [[ "${{ github.event.inputs.deploy_vets }}" == "true" ]]; then
+              nohup java -jar vets.jar > vets.log 2>&1 &
+            fi
+            if [[ "${{ github.event.inputs.deploy_visits }}" == "true" ]]; then
+              nohup java -jar visits.jar > visits.log 2>&1 &
+            fi
+            if [[ "${{ github.event.inputs.deploy_gateway }}" == "true" ]]; then
+              nohup java -jar gateway.jar > gateway.log 2>&1 &
+            fi
+          EOF
