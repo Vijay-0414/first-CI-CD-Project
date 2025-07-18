@@ -24,6 +24,9 @@ import org.springframework.samples.petclinic.vets.system.VetsProperties;
 /**
  * @author Maciej Szarlinski
  */
+/**
+ * @author Maciej Szarlinski
+ */
 @EnableDiscoveryClient
 @SpringBootApplication
 @EnableConfigurationProperties(VetsProperties.class)
