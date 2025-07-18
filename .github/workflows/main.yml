@@ -3,106 +3,114 @@ name: Selective Microservice Deployment to EC2
 on:
   workflow_dispatch:
     inputs:
-      deploy_discovery:
-        description: 'Deploy Discovery Server?'
-        required: false
-        default: 'false'
-      deploy_customers:
-        description: 'Deploy Customers Service?'
-        required: false
-        default: 'false'
-      deploy_vets:
-        description: 'Deploy Vets Service?'
-        required: false
-        default: 'false'
-      deploy_visits:
-        description: 'Deploy Visits Service?'
-        required: false
-        default: 'false'
       deploy_gateway:
-        description: 'Deploy API Gateway?'
+        description: "Deploy API Gateway"
         required: false
-        default: 'false'
+        type: boolean
+      deploy_customers:
+        description: "Deploy Customers Service"
+        required: false
+        type: boolean
+      deploy_vets:
+        description: "Deploy Vets Service"
+        required: false
+        type: boolean
+      deploy_visits:
+        description: "Deploy Visits Service"
+        required: false
+        type: boolean
+      deploy_discovery:
+        description: "Deploy Discovery Server"
+        required: false
+        type: boolean
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+steps:
+- name: Checkout repository
+  uses: actions/checkout@v3
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+- name: Set up Java
+  uses: actions/setup-java@v3
+  with:
+    distribution: 'temurin'
+    java-version: '17'
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+# TEST & BUILD ONLY SELECTED SERVICES
 
-      - name: Build all JARs
-        run: mvn clean package -DskipTests
+- name: Test and build API Gateway
+  if: ${{ inputs.deploy_gateway }}
+  run: |
+    cd spring-petclinic-api-gateway
+    mvn test
+    mvn package -DskipTests
 
-      - name: Prepare SSH key
-        run: |
-          echo "${{ secrets.EC2_KEY }}" > key.pem
-          chmod 400 key.pem
+- name: Test and build Customers Service
+  if: ${{ inputs.deploy_customers }}
+  run: |
+    cd spring-petclinic-customers-service
+    mvn test
+    mvn package -DskipTests
 
-      - name: Deploy Selected Services to EC2
-        run: |
-          echo "Uploading selected services..."
-          
-          # Discovery Server
-          if [ "${{ github.event.inputs.deploy_discovery }}" == "true" ]; then
-            echo "Deploying Discovery Server..."
-            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-discovery-server/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/discovery.jar
-          fi
+- name: Test and build Vets Service
+  if: ${{ inputs.deploy_vets }}
+  run: |
+    cd spring-petclinic-vets-service
+    mvn test
+    mvn package -DskipTests
 
-          # Customers Service
-          if [ "${{ github.event.inputs.deploy_customers }}" == "true" ]; then
-            echo "Deploying Customers Service..."
-            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-customers-service/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/customers.jar
-          fi
+- name: Test and build Visits Service
+  if: ${{ inputs.deploy_visits }}
+  run: |
+    cd spring-petclinic-visits-service
+    mvn test
+    mvn package -DskipTests
 
-          # Vets Service
-          if [ "${{ github.event.inputs.deploy_vets }}" == "true" ]; then
-            echo "Deploying Vets Service..."
-            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-vets-service/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/vets.jar
-          fi
+- name: Test and build Discovery Server
+  if: ${{ inputs.deploy_discovery }}
+  run: |
+    cd spring-petclinic-discovery-server
+    mvn test
+    mvn package -DskipTests
 
-          # Visits Service
-          if [ "${{ github.event.inputs.deploy_visits }}" == "true" ]; then
-            echo "Deploying Visits Service..."
-            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-visits-service/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/visits.jar
-          fi
+# DEPLOY ONLY SELECTED JARs
+- name: Copy files to EC2
+  if: ${{ inputs.deploy_gateway || inputs.deploy_customers || inputs.deploy_vets || inputs.deploy_visits || inputs.deploy_discovery }}
+  uses: appleboy/scp-action@master
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ubuntu
+    key: ${{ secrets.EC2_KEY }}
+    source: |
+      ${{ inputs.deploy_gateway && 'spring-petclinic-api-gateway/target/*.jar' || '' }}
+      ${{ inputs.deploy_customers && 'spring-petclinic-customers-service/target/*.jar' || '' }}
+      ${{ inputs.deploy_vets && 'spring-petclinic-vets-service/target/*.jar' || '' }}
+      ${{ inputs.deploy_visits && 'spring-petclinic-visits-service/target/*.jar' || '' }}
+      ${{ inputs.deploy_discovery && 'spring-petclinic-discovery-server/target/*.jar' || '' }}
+    target: ~/microservices
 
-          # API Gateway
-          if [ "${{ github.event.inputs.deploy_gateway }}" == "true" ]; then
-            echo "Deploying API Gateway..."
-            scp -i key.pem -o StrictHostKeyChecking=no spring-petclinic-api-gateway/target/*.jar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/gateway.jar
-          fi
-
-      - name: Restart Selected Services on EC2
-        run: |
-          ssh -i key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            echo "Restarting selected services..."
-
-            # Kill all running JARs (optional - can be improved to target by name)
-            pkill -f '.jar' || true
-
-            sleep 5
-
-            if [[ "${{ github.event.inputs.deploy_discovery }}" == "true" ]]; then
-              nohup java -jar discovery.jar > discovery.log 2>&1 &
-            fi
-            if [[ "${{ github.event.inputs.deploy_customers }}" == "true" ]]; then
-              nohup java -jar customers.jar > customers.log 2>&1 &
-            fi
-            if [[ "${{ github.event.inputs.deploy_vets }}" == "true" ]]; then
-              nohup java -jar vets.jar > vets.log 2>&1 &
-            fi
-            if [[ "${{ github.event.inputs.deploy_visits }}" == "true" ]]; then
-              nohup java -jar visits.jar > visits.log 2>&1 &
-            fi
-            if [[ "${{ github.event.inputs.deploy_gateway }}" == "true" ]]; then
-              nohup java -jar gateway.jar > gateway.log 2>&1 &
-            fi
-          EOF
+- name: SSH & Run Services
+  if: ${{ inputs.deploy_gateway || inputs.deploy_customers || inputs.deploy_vets || inputs.deploy_visits || inputs.deploy_discovery }}
+  uses: appleboy/ssh-action@master
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ubuntu
+    key: ${{ secrets.EC2_KEY }}
+    script: |
+      cd ~/microservices
+      if [ "${{ inputs.deploy_gateway }}" == 'true' ]; then
+        nohup java -jar spring-petclinic-api-gateway/target/*.jar > gateway.log 2>&1 &
+      fi
+      if [ "${{ inputs.deploy_customers }}" == 'true' ]; then
+        nohup java -jar spring-petclinic-customers-service/target/*.jar > customers.log 2>&1 &
+      fi
+      if [ "${{ inputs.deploy_vets }}" == 'true' ]; then
+        nohup java -jar spring-petclinic-vets-service/target/*.jar > vets.log 2>&1 &
+      fi
+      if [ "${{ inputs.deploy_visits }}" == 'true' ]; then
+        nohup java -jar spring-petclinic-visits-service/target/*.jar > visits.log 2>&1 &
+      fi
+      if [ "${{ inputs.deploy_discovery }}" == 'true' ]; then
+        nohup java -jar spring-petclinic-discovery-server/target/*.jar > discovery.log 2>&1 &
+      fi
