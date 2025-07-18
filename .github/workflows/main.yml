@@ -1,33 +1,28 @@
-name: Selective Microservice Deployment to EC2
+name: Deploy to EC2
 
 on:
   workflow_dispatch:
     inputs:
       deploy_gateway:
-        description: "Deploy API Gateway"
-        required: false
         type: boolean
+        default: false
       deploy_customers:
-        description: "Deploy Customers Service"
-        required: false
         type: boolean
+        default: false
       deploy_vets:
-        description: "Deploy Vets Service"
-        required: false
         type: boolean
+        default: false
       deploy_visits:
-        description: "Deploy Visits Service"
-        required: false
         type: boolean
+        default: false
       deploy_discovery:
-        description: "Deploy Discovery Server"
-        required: false
         type: boolean
+        default: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -38,61 +33,56 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    # TEST & BUILD ONLY SELECTED SERVICES
-
-    - name: Test and build API Gateway
-      if: ${{ inputs.deploy_gateway }}
+    # TEST + BUILD ONLY SELECTED SERVICES
+    - name: Test & build selected services
       run: |
-        cd spring-petclinic-api-gateway
-        mvn test
-        mvn package -DskipTests
+        if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
+          cd spring-petclinic-api-gateway && mvn test && mvn package -DskipTests && cd ..
+        fi
+        if [ "${{ inputs.deploy_customers }}" == "true" ]; then
+          cd spring-petclinic-customers-service && mvn test && mvn package -DskipTests && cd ..
+        fi
+        if [ "${{ inputs.deploy_vets }}" == "true" ]; then
+          cd spring-petclinic-vets-service && mvn test && mvn package -DskipTests && cd ..
+        fi
+        if [ "${{ inputs.deploy_visits }}" == "true" ]; then
+          cd spring-petclinic-visits-service && mvn test && mvn package -DskipTests && cd ..
+        fi
+        if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
+          cd spring-petclinic-discovery-server && mvn test && mvn package -DskipTests && cd ..
+        fi
 
-    - name: Test and build Customers Service
-      if: ${{ inputs.deploy_customers }}
+    # COPY SELECTED FILES
+    - name: Upload selected JARs to EC2
       run: |
-        cd spring-petclinic-customers-service
-        mvn test
-        mvn package -DskipTests
+        mkdir upload
+        if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
+          cp spring-petclinic-api-gateway/target/*.jar upload/gateway.jar
+        fi
+        if [ "${{ inputs.deploy_customers }}" == "true" ]; then
+          cp spring-petclinic-customers-service/target/*.jar upload/customers.jar
+        fi
+        if [ "${{ inputs.deploy_vets }}" == "true" ]; then
+          cp spring-petclinic-vets-service/target/*.jar upload/vets.jar
+        fi
+        if [ "${{ inputs.deploy_visits }}" == "true" ]; then
+          cp spring-petclinic-visits-service/target/*.jar upload/visits.jar
+        fi
+        if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
+          cp spring-petclinic-discovery-server/target/*.jar upload/discovery.jar
+        fi
 
-    - name: Test and build Vets Service
-      if: ${{ inputs.deploy_vets }}
-      run: |
-        cd spring-petclinic-vets-service
-        mvn test
-        mvn package -DskipTests
-
-    - name: Test and build Visits Service
-      if: ${{ inputs.deploy_visits }}
-      run: |
-        cd spring-petclinic-visits-service
-        mvn test
-        mvn package -DskipTests
-
-    - name: Test and build Discovery Server
-      if: ${{ inputs.deploy_discovery }}
-      run: |
-        cd spring-petclinic-discovery-server
-        mvn test
-        mvn package -DskipTests
-
-    # DEPLOY ONLY SELECTED JARs
-    - name: Copy files to EC2
-      if: ${{ inputs.deploy_gateway || inputs.deploy_customers || inputs.deploy_vets || inputs.deploy_visits || inputs.deploy_discovery }}
+    - name: SCP to EC2
       uses: appleboy/scp-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        source: |
-          ${{ inputs.deploy_gateway && 'spring-petclinic-api-gateway/target/*.jar' || '' }}
-          ${{ inputs.deploy_customers && 'spring-petclinic-customers-service/target/*.jar' || '' }}
-          ${{ inputs.deploy_vets && 'spring-petclinic-vets-service/target/*.jar' || '' }}
-          ${{ inputs.deploy_visits && 'spring-petclinic-visits-service/target/*.jar' || '' }}
-          ${{ inputs.deploy_discovery && 'spring-petclinic-discovery-server/target/*.jar' || '' }}
+        source: upload/*
         target: ~/microservices
 
-    - name: SSH & Run Services
-      if: ${{ inputs.deploy_gateway || inputs.deploy_customers || inputs.deploy_vets || inputs.deploy_visits || inputs.deploy_discovery }}
+    # RUN SERVICES
+    - name: SSH and run apps
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -100,18 +90,18 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           cd ~/microservices
-          if [ "${{ inputs.deploy_gateway }}" == 'true' ]; then
-            nohup java -jar spring-petclinic-api-gateway/target/*.jar > gateway.log 2>&1 &
+          if [ -f gateway.jar ]; then
+            nohup java -jar gateway.jar > gateway.log 2>&1 &
           fi
-          if [ "${{ inputs.deploy_customers }}" == 'true' ]; then
-            nohup java -jar spring-petclinic-customers-service/target/*.jar > customers.log 2>&1 &
+          if [ -f customers.jar ]; then
+            nohup java -jar customers.jar > customers.log 2>&1 &
           fi
-          if [ "${{ inputs.deploy_vets }}" == 'true' ]; then
-            nohup java -jar spring-petclinic-vets-service/target/*.jar > vets.log 2>&1 &
+          if [ -f vets.jar ]; then
+            nohup java -jar vets.jar > vets.log 2>&1 &
           fi
-          if [ "${{ inputs.deploy_visits }}" == 'true' ]; then
-            nohup java -jar spring-petclinic-visits-service/target/*.jar > visits.log 2>&1 &
+          if [ -f visits.jar ]; then
+            nohup java -jar visits.jar > visits.log 2>&1 &
           fi
-          if [ "${{ inputs.deploy_discovery }}" == 'true' ]; then
-            nohup java -jar spring-petclinic-discovery-server/target/*.jar > discovery.log 2>&1 &
+          if [ -f discovery.jar ]; then
+            nohup java -jar discovery.jar > discovery.log 2>&1 &
           fi
