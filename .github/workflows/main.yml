@@ -1,108 +1,117 @@
-name: Microservices CI/CD Pipeline
+name: Selective Microservice Deployment to EC2
 
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
     inputs:
       deploy_gateway:
-        description: 'Deploy spring-petclinic-api-gateway'
+        description: "Deploy API Gateway"
         required: false
         type: boolean
       deploy_customers:
-        description: 'Deploy spring-petclinic-customers-service'
+        description: "Deploy Customers Service"
         required: false
         type: boolean
       deploy_vets:
-        description: 'Deploy spring-petclinic-vets-service'
+        description: "Deploy Vets Service"
         required: false
         type: boolean
       deploy_visits:
-        description: 'Deploy spring-petclinic-visits-service'
+        description: "Deploy Visits Service"
         required: false
         type: boolean
       deploy_discovery:
-        description: 'Deploy spring-petclinic-discovery-server'
+        description: "Deploy Discovery Server"
         required: false
         type: boolean
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      EC2_HOST: ${{ secrets.EC2_HOST }}
-      EC2_USER: ${{ secrets.EC2_USER }}
-      EC2_KEY: ${{ secrets.EC2_KEY }}
-
+    
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup Java
+    - name: Set up Java
       uses: actions/setup-java@v3
       with:
-        java-version: '17'
         distribution: 'temurin'
+        java-version: '17'
 
-    - name: Determine trigger mode (manual or auto)
-      id: mode
+    # TEST & BUILD ONLY SELECTED SERVICES
+
+    - name: Test and build API Gateway
+      if: ${{ inputs.deploy_gateway }}
       run: |
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          echo "mode=manual" >> $GITHUB_OUTPUT
-        else
-          echo "mode=auto" >> $GITHUB_OUTPUT
-        fi
+        cd spring-petclinic-api-gateway
+        mvn test
+        mvn package -DskipTests
 
-    - name: Determine changed services (auto mode only)
-      if: steps.mode.outputs.mode == 'auto'
-      id: changed
+    - name: Test and build Customers Service
+      if: ${{ inputs.deploy_customers }}
       run: |
-        git fetch origin dev
-        CHANGED=$(git diff --name-only HEAD^ HEAD)
+        cd spring-petclinic-customers-service
+        mvn test
+        mvn package -DskipTests
 
-        echo "changed_gateway=false" >> $GITHUB_OUTPUT
-        echo "changed_customers=false" >> $GITHUB_OUTPUT
-        echo "changed_vets=false" >> $GITHUB_OUTPUT
-        echo "changed_visits=false" >> $GITHUB_OUTPUT
-        echo "changed_discovery=false" >> $GITHUB_OUTPUT
-
-        if echo "$CHANGED" | grep -q 'spring-petclinic-api-gateway/'; then echo "changed_gateway=true" >> $GITHUB_OUTPUT; fi
-        if echo "$CHANGED" | grep -q 'spring-petclinic-customers-service/'; then echo "changed_customers=true" >> $GITHUB_OUTPUT; fi
-        if echo "$CHANGED" | grep -q 'spring-petclinic-vets-service/'; then echo "changed_vets=true" >> $GITHUB_OUTPUT; fi
-        if echo "$CHANGED" | grep -q 'spring-petclinic-visits-service/'; then echo "changed_visits=true" >> $GITHUB_OUTPUT; fi
-        if echo "$CHANGED" | grep -q 'spring-petclinic-discovery-server/'; then echo "changed_discovery=true" >> $GITHUB_OUTPUT; fi
-
-    - name: Convert PEM key
-      run: echo "$EC2_KEY" > key.pem && chmod 600 key.pem
-
-    - name: Deploy each service
+    - name: Test and build Vets Service
+      if: ${{ inputs.deploy_vets }}
       run: |
-        deploy_service() {
-          NAME=$1
-          PATH=$2
+        cd spring-petclinic-vets-service
+        mvn test
+        mvn package -DskipTests
 
-          echo "Deploying $NAME..."
-          cd $PATH
-          mvn test
-          mvn package -DskipTests
-          scp -i ../../key.pem target/*.jar $EC2_USER@$EC2_HOST:/home/$EC2_USER/$NAME.jar
-          ssh -i ../../key.pem $EC2_USER@$EC2_HOST "pkill -f $NAME.jar || true && nohup java -jar /home/$EC2_USER/$NAME.jar > /dev/null 2>&1 &"
-          cd -
-        }
+    - name: Test and build Visits Service
+      if: ${{ inputs.deploy_visits }}
+      run: |
+        cd spring-petclinic-visits-service
+        mvn test
+        mvn package -DskipTests
 
-        # Manual Mode Deploy
-        if [[ "${{ steps.mode.outputs.mode }}" == "manual" ]]; then
-          ${{ inputs.deploy_gateway && 'deploy_service "gateway" "spring-petclinic-api-gateway"' || ':' }}
-          ${{ inputs.deploy_customers && 'deploy_service "customers" "spring-petclinic-customers-service"' || ':' }}
-          ${{ inputs.deploy_vets && 'deploy_service "vets" "spring-petclinic-vets-service"' || ':' }}
-          ${{ inputs.deploy_visits && 'deploy_service "visits" "spring-petclinic-visits-service"' || ':' }}
-          ${{ inputs.deploy_discovery && 'deploy_service "discovery" "spring-petclinic-discovery-server"' || ':' }}
-        else
-          # Auto Mode Deploy
-          ${{ steps.changed.outputs.changed_gateway == 'true' && 'deploy_service "gateway" "spring-petclinic-api-gateway"' || ':' }}
-          ${{ steps.changed.outputs.changed_customers == 'true' && 'deploy_service "customers" "spring-petclinic-customers-service"' || ':' }}
-          ${{ steps.changed.outputs.changed_vets == 'true' && 'deploy_service "vets" "spring-petclinic-vets-service"' || ':' }}
-          ${{ steps.changed.outputs.changed_visits == 'true' && 'deploy_service "visits" "spring-petclinic-visits-service"' || ':' }}
-          ${{ steps.changed.outputs.changed_discovery == 'true' && 'deploy_service "discovery" "spring-petclinic-discovery-server"' || ':' }}
-        fi
+    - name: Test and build Discovery Server
+      if: ${{ inputs.deploy_discovery }}
+      run: |
+        cd spring-petclinic-discovery-server
+        mvn test
+        mvn package -DskipTests
+
+    # DEPLOY ONLY SELECTED JARs
+    - name: Copy files to EC2
+      if: ${{ inputs.deploy_gateway || inputs.deploy_customers || inputs.deploy_vets || inputs.deploy_visits || inputs.deploy_discovery }}
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        source: |
+          ${{ inputs.deploy_gateway && 'spring-petclinic-api-gateway/target/*.jar' || '' }}
+          ${{ inputs.deploy_customers && 'spring-petclinic-customers-service/target/*.jar' || '' }}
+          ${{ inputs.deploy_vets && 'spring-petclinic-vets-service/target/*.jar' || '' }}
+          ${{ inputs.deploy_visits && 'spring-petclinic-visits-service/target/*.jar' || '' }}
+          ${{ inputs.deploy_discovery && 'spring-petclinic-discovery-server/target/*.jar' || '' }}
+        target: ~/microservices
+
+    - name: SSH & Run Services
+      if: ${{ inputs.deploy_gateway || inputs.deploy_customers || inputs.deploy_vets || inputs.deploy_visits || inputs.deploy_discovery }}
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          cd ~/microservices
+          if [ "${{ inputs.deploy_gateway }}" == 'true' ]; then
+            nohup java -jar spring-petclinic-api-gateway/target/*.jar > gateway.log 2>&1 &
+          fi
+          if [ "${{ inputs.deploy_customers }}" == 'true' ]; then
+            nohup java -jar spring-petclinic-customers-service/target/*.jar > customers.log 2>&1 &
+          fi
+          if [ "${{ inputs.deploy_vets }}" == 'true' ]; then
+            nohup java -jar spring-petclinic-vets-service/target/*.jar > vets.log 2>&1 &
+          fi
+          if [ "${{ inputs.deploy_visits }}" == 'true' ]; then
+            nohup java -jar spring-petclinic-visits-service/target/*.jar > visits.log 2>&1 &
+          fi
+          if [ "${{ inputs.deploy_discovery }}" == 'true' ]; then
+            nohup java -jar spring-petclinic-discovery-server/target/*.jar > discovery.log 2>&1 &
+          fi
