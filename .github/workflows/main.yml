@@ -55,7 +55,7 @@ jobs:
     # COPY SELECTED FILES
     - name: Upload selected JARs to EC2
       run: |
-        mkdir upload
+        mkdir Updated
         if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
           cp spring-petclinic-api-gateway/target/*.jar upload/gateway.jar
         fi
@@ -78,8 +78,8 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        source: upload/*
-        target: ~/Microservices/Updated
+        source: Updated/*
+        target: ~/Microservices
 
     # RUN SERVICES
     - name: SSH and deploy only updated services
