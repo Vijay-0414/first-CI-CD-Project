@@ -3,19 +3,19 @@ name: Deploy to EC2
 on:
   workflow_dispatch:
     inputs:
-      deploy_gateway:
+      deploy_gateway:  #spring-petclinic-api-gateway
         type: boolean
         default: false
-      deploy_customers:
+      deploy_customers:  #spring-petclinic-customer-service
         type: boolean
         default: false
-      deploy_vets:
+      deploy_vets:  #spring-petclinic-vets-service
         type: boolean
         default: false
-      deploy_visits:
+      deploy_visits:  #spring-petclinic-visits-service
         type: boolean
         default: false
-      deploy_discovery:
+      deploy_discovery:  #spring-petclinic-discovery-server
         type: boolean
         default: false
 
@@ -83,6 +83,7 @@ jobs:
 
     # RUN SERVICES
     - name: SSH and run apps
+    
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -91,7 +92,7 @@ jobs:
         script: |
           cd ~/microservices
           if [ -f gateway.jar ]; then
-            nohup java -jar gateway.jar > gateway.log 2>&1 &
+            nohup java -jar gateway.jar > gateway.log 2>$1 &
           fi
           if [ -f customers.jar ]; then
             nohup java -jar customers.jar > customers.log 2>&1 &
