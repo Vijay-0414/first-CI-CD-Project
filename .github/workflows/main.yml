@@ -57,19 +57,19 @@ jobs:
       run: |
         mkdir Updated
         if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
-          cp spring-petclinic-api-gateway/target/*.jar upload/gateway.jar
+          cp spring-petclinic-api-gateway/target/*.jar Updated/gateway.jar
         fi
         if [ "${{ inputs.deploy_customers }}" == "true" ]; then
-          cp spring-petclinic-customers-service/target/*.jar upload/customers.jar
+          cp spring-petclinic-customers-service/target/*.jar Updated/customers.jar
         fi
         if [ "${{ inputs.deploy_vets }}" == "true" ]; then
-          cp spring-petclinic-vets-service/target/*.jar upload/vets.jar
+          cp spring-petclinic-vets-service/target/*.jar Updated/vets.jar
         fi
         if [ "${{ inputs.deploy_visits }}" == "true" ]; then
-          cp spring-petclinic-visits-service/target/*.jar upload/visits.jar
+          cp spring-petclinic-visits-service/target/*.jar Updated/visits.jar
         fi
         if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
-          cp spring-petclinic-discovery-server/target/*.jar upload/discovery.jar
+          cp spring-petclinic-discovery-server/target/*.jar Updated/discovery.jar
         fi
 
     - name: SCP to EC2
