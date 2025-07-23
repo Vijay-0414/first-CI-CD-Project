@@ -102,7 +102,7 @@ jobs:
 
             filename=$(basename "$filepath")
             servicename="${filename%.jar}"
-            fulljar="~/microservices/${filename}"
+            fulljar="~/Microservices/${filename}"
 
             echo "Restarting service: $servicename"
 
@@ -115,7 +115,7 @@ jobs:
 
             if [ -f "$filename" ]; then
               echo "Backing up old ${filename}"
-              cp "$filename" "Backup/${servicename}-${timestamp}.jar"
+              mv "$filename" "Backup/${servicename}-${timestamp}.jar"
             fi
 
             echo "Moving updated jar to microservices root"
