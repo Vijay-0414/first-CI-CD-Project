@@ -91,18 +91,18 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           cd ~/microservices
-          if [ -f gateway.jar ]; then
-            nohup java -jar gateway.jar > gateway.log 2>$1 &
-          fi
-          if [ -f customers.jar ]; then
-            nohup java -jar customers.jar > customers.log 2>&1 &
-          fi
-          if [ -f vets.jar ]; then
-            nohup java -jar vets.jar > vets.log 2>&1 &
-          fi
-          if [ -f visits.jar ]; then
-            nohup java -jar visits.jar > visits.log 2>&1 &
-          fi
-          if [ -f discovery.jar ]; then
-            nohup java -jar discovery.jar > discovery.log 2>&1 &
-          fi
+          mkdir -p backup
+          for jar in *.jar; do
+            name="${jar%.*}"
+            timestamp=$(date +%Y%m%d_%H%M%S)
+
+            if pgrep -f "$jar" > /dev/null; then
+              pkill -f "$jar"
+              mv "$jar" "backup/${name}_$timestamp.jar"
+            fi
+
+            ls -tp backup/${name}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}
+
+            nohup java -jar "$jar" > "${name}.log" 2>&1 &
+          done
+          
