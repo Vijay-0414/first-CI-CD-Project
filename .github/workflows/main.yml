@@ -90,28 +90,42 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           cd ~/Microservices
+          mkdir -p Backup
+
+          echo "📂 Listing JARs in Updated/"
+          ls -l Updated || echo "No JARs found"
 
           timestamp=$(date +"%Y-%m-%d_%H-%M")
 
-          for filepath in Updated/*.jar
-          do
+          for filepath in Updated/*.jar; do
             [ -e "$filepath" ] || continue
 
             filename=$(basename "$filepath")
             servicename="${filename%.jar}"
+            fulljar="~/microservices/${filename}"
 
-            echo "Updating ${servicename}.jar..."
+            echo "🔁 Restarting service: $servicename"
 
-            pkill -f ${servicename}.jar || true
-
-            if [ -f ${servicename}.jar ]; then
-              mv ${servicename}.jar Backup/${servicename}-${timestamp}.jar
+            pid=$(pgrep -f "$fulljar")
+            if [ -n "$pid" ]; then
+              echo "🛑 Stopping $servicename (PID: $pid)"
+              kill "$pid"
+              sleep 2
             fi
 
-            mv Updated/${servicename}.jar ${servicename}.jar
+            if [ -f "$filename" ]; then
+              echo "📦 Backing up old ${filename}"
+              mv "$filename" "Backup/${servicename}-${timestamp}.jar"
+            fi
 
-            nohup java -jar ${servicename}.jar > ${servicename}.log 2>&1 &
+            echo "📤 Moving updated jar to microservices root"
+            mv "Updated/${filename}" "${filename}"
 
-            echo "${servicename}.jar restarted successfully."
+            echo "🚀 Starting ${filename}"
+            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
+
+            echo "✅ $servicename restarted"
           done
-          
+
+          echo "🧹 Cleaning Updated folder"
+          rm -rf Updated/*
