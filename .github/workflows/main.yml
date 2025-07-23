@@ -92,7 +92,7 @@ jobs:
           cd ~/Microservices
           mkdir -p Backup
 
-          echo "📂 Listing JARs in Updated/"
+          echo "Listing JARs in Updated/"
           ls -l Updated || echo "No JARs found"
 
           timestamp=$(date +"%Y-%m-%d_%H-%M")
@@ -104,27 +104,27 @@ jobs:
             servicename="${filename%.jar}"
             fulljar="~/microservices/${filename}"
 
-            echo "🔁 Restarting service: $servicename"
+            echo "Restarting service: $servicename"
 
             pid=$(pgrep -f "$fulljar")
             if [ -n "$pid" ]; then
-              echo "🛑 Stopping $servicename (PID: $pid)"
+              echo "Stopping $servicename (PID: $pid)"
               kill "$pid"
               sleep 2
             fi
 
             if [ -f "$filename" ]; then
-              echo "📦 Backing up old ${filename}"
-              mv "$filename" "Backup/${servicename}-${timestamp}.jar"
+              echo "Backing up old ${filename}"
+              cp "$filename" "Backup/${servicename}-${timestamp}.jar"
             fi
 
-            echo "📤 Moving updated jar to microservices root"
+            echo "Moving updated jar to microservices root"
             mv "Updated/${filename}" "${filename}"
 
-            echo "🚀 Starting ${filename}"
+            echo "Starting ${filename}"
             nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
 
-            echo "✅ $servicename restarted"
+            echo "$servicename restarted"
           done
 
           echo "🧹 Cleaning Updated folder"
