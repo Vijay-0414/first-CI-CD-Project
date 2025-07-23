@@ -92,17 +92,23 @@ jobs:
         script: |
           cd ~/microservices
           mkdir -p backup
-          for jar in *.jar; do
-            name="${jar%.*}"
+          for jar in upload/*.jar; do
+            name=$(basename "$jar")
+            base="${name%.*}"
             timestamp=$(date +%Y%m%d_%H%M%S)
 
-            if pgrep -f "$jar" > /dev/null; then
-              pkill -f "$jar"
-              mv "$jar" "backup/${name}_$timestamp.jar"
+            if [ -f "$base.jar"]; then  #Backup OLD Version if Exists
+              mv "$base.jar" "backup/${base}_${timestamp}.jar"
             fi
 
-            ls -tp backup/${name}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}
+            ls -tp backup/${base}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}  #Only keep latest 1 backup
 
-            nohup java -jar "$jar" > "${name}.log" 2>&1 &
+            if pgrep -f "$base.jar" > /dev/null; then  #Kill OLD Process
+              pkill -f "$base.jar"
+            fi
+
+            mv "upload/$name" "$base.jar"  #Move jar file to main folder
+
+            nohup java -jar "$base.jar" > "${base}.log" 2>&1 &  #Start service
           done
           
