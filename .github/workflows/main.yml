@@ -79,36 +79,39 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         source: upload/*
-        target: ~/microservices
+        target: ~/Microservices/Updated
 
     # RUN SERVICES
-    - name: SSH and run apps
-    
+    - name: SSH and deploy only updated services
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          cd ~/microservices
-          mkdir -p backup
-          for jar in upload/*.jar; do
-            name=$(basename "$jar")
-            base="${name%.*}"
-            timestamp=$(date +%Y%m%d_%H%M%S)
+          cd ~/Microservices
 
-            if [ -f "$base.jar"]; then  #Backup OLD Version if Exists
-              mv "$base.jar" "backup/${base}_${timestamp}.jar"
+          timestamp=$(date +"%Y-%m-%d_%H-%M")
+
+          for filepath in Updated/*.jar
+          do
+            [ -e "$filepath" ] || continue
+
+            filename=$(basename "$filepath")
+            servicename="${filename%.jar}"
+
+            echo "Updating ${servicename}.jar..."
+
+            pkill -f ${servicename}.jar || true
+
+            if [ -f ${servicename}.jar ]; then
+              mv ${servicename}.jar Backup/${servicename}-${timestamp}.jar
             fi
 
-            ls -tp backup/${base}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}  #Only keep latest 1 backup
+            mv Updated/${servicename}.jar ${servicename}.jar
 
-            if pgrep -f "$base.jar" > /dev/null; then  #Kill OLD Process
-              pkill -f "$base.jar"
-            fi
+            nohup java -jar ${servicename}.jar > ${servicename}.log 2>&1 &
 
-            mv "upload/$name" "$base.jar"  #Move jar file to main folder
-
-            nohup java -jar "$base.jar" > "${base}.log" 2>&1 &  #Start service
+            echo "${servicename}.jar restarted successfully."
           done
           
