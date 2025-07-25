@@ -92,7 +92,6 @@ jobs:
           cd ~/Microservices
           mkdir -p Backup
 
-          echo "Listing JARs in Updated/"
           ls -l Updated || echo "No JARs found"
 
           for filepath in Updated/*.jar; do
@@ -102,9 +101,7 @@ jobs:
             servicename="${filename%.jar}"
             fulljar="~/Microservices/${filename}"
 
-            echo "Restarting service: $servicename"
-
-            pid=$(pgrep -f "$fulljar")
+            pid=$(pgrep -f "$filename")
             if [ -n "$pid" ]; then
               echo "Stopping $servicename (PID: $pid)"
               kill "$pid"
@@ -116,14 +113,8 @@ jobs:
               mv "$filename" "Backup/${servicename}.jar"
             fi
 
-            echo "Moving updated jar to microservices root"
-            mv "Updated/${filename}" "${filename}"
+            mv "Updated/${filename}" "${filename}"  
+            
+            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &  
 
-            echo "Starting ${filename}"
-            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
-
-            echo "$servicename restarted"
           done
-
-          echo "🧹 Cleaning Updated folder"
-          rm -rf Updated/*
