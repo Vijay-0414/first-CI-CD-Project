@@ -95,8 +95,6 @@ jobs:
           echo "Listing JARs in Updated/"
           ls -l Updated || echo "No JARs found"
 
-          timestamp=$(date +"%Y-%m-%d_%H-%M")
-
           for filepath in Updated/*.jar; do
             [ -e "$filepath" ] || continue
 
@@ -115,7 +113,7 @@ jobs:
 
             if [ -f "$filename" ]; then
               echo "Backing up old ${filename}"
-              mv "$filename" "Backup/${servicename}-${timestamp}.jar"
+              mv "$filename" "Backup/${servicename}.jar"
             fi
 
             echo "Moving updated jar to microservices root"
