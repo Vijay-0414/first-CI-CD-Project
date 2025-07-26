@@ -79,7 +79,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         source: Updated/*
-        target: ~/Microservices
+        target: ~/Microservices/Updated
 
     # RUN SERVICES
     - name: SSH and run apps
@@ -95,10 +95,9 @@ jobs:
           for jar in Updated/*.jar; do
             name=$(basename "$jar")
             base="${name%.*}"
-            timestamp=$(date +%Y%m%d_%H%M%S)
 
             if [ -f "$base.jar"]; then  #Backup OLD Version if Exists
-              mv "$base.jar" "Backup/${base}_${timestamp}.jar"
+              mv "$base.jar" "Backup/${base}.jar"
             fi
 
             ls -tp Backup/${base}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}  #Only keep latest 1 backup
