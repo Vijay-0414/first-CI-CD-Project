@@ -79,7 +79,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         source: Updated/*
-        target: ~/Microservices
+        target: ~/Microservices/Updated
 
     # RUN SERVICES
     - name: SSH and deploy only updated services
@@ -92,7 +92,10 @@ jobs:
           cd ~/Microservices
           mkdir -p Backup
 
+          echo "Listing JARs in Updated/"
           ls -l Updated || echo "No JARs found"
+
+          timestamp=$(date +"%Y-%m-%d_%H-%M")
 
           for filepath in Updated/*.jar; do
             [ -e "$filepath" ] || continue
@@ -101,7 +104,9 @@ jobs:
             servicename="${filename%.jar}"
             fulljar="~/Microservices/${filename}"
 
-            pid=$(pgrep -f "$filename")
+            echo "Restarting service: $servicename"
+
+            pid=$(pgrep -f "$fulljar")
             if [ -n "$pid" ]; then
               echo "Stopping $servicename (PID: $pid)"
               kill "$pid"
@@ -110,11 +115,17 @@ jobs:
 
             if [ -f "$filename" ]; then
               echo "Backing up old ${filename}"
-              mv "$filename" "Backup/${servicename}.jar"
+              cp "$filename" "Backup/${servicename}-${timestamp}.jar"
             fi
 
-            mv "Updated/${filename}" "${filename}"  
-            
-            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &  
+            echo "Moving updated jar to microservices root"
+            mv "Updated/${filename}" "${filename}"
 
+            echo "Starting ${filename}"
+            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
+
+            echo "$servicename restarted"
           done
+
+          echo "🧹 Cleaning Updated folder"
+          rm -rf Updated/*
