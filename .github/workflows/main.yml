@@ -79,7 +79,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         source: Updated/*
-        target: ~/Microservices/Updated
+        target: ~/Microservices
 
     # RUN SERVICES
     - name: SSH and run apps
