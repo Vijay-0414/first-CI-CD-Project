@@ -79,7 +79,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         source: upload/*
-        target: ~/microservices/upload
+        target: ~/microservices
 
     # RUN SERVICES
     - name: 🚀 SSH and Restart Updated Services
