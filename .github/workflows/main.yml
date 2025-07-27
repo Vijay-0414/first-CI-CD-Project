@@ -53,7 +53,7 @@ jobs:
         fi
 
     # COPY SELECTED FILES
-    - name: Upload selected JARs to EC2
+    - name: Upload selected JARs to Updated Folder
       run: |
         mkdir Updated
         if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
@@ -92,10 +92,7 @@ jobs:
           cd ~/Microservices
           mkdir -p Backup
 
-          echo "Listing JARs in Updated/"
           ls -l Updated || echo "No JARs found"
-
-          timestamp=$(date +"%Y-%m-%d_%H-%M")
 
           for filepath in Updated/*.jar; do
             [ -e "$filepath" ] || continue
@@ -103,8 +100,6 @@ jobs:
             filename=$(basename "$filepath")
             servicename="${filename%.jar}"
             fulljar="~/Microservices/${filename}"
-
-            echo "Restarting service: $servicename"
 
             pid=$(pgrep -f "$fulljar")
             if [ -n "$pid" ]; then
@@ -115,17 +110,13 @@ jobs:
 
             if [ -f "$filename" ]; then
               echo "Backing up old ${filename}"
-              cp "$filename" "Backup/${servicename}-${timestamp}.jar"
+              cp "$filename" "Backup/${servicename}.jar"
             fi
 
-            echo "Moving updated jar to microservices root"
             mv "Updated/${filename}" "${filename}"
 
-            echo "Starting ${filename}"
             nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
 
-            echo "$servicename restarted"
           done
 
-          echo "🧹 Cleaning Updated folder"
           rm -rf Updated/*
