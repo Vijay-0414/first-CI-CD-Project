@@ -104,27 +104,27 @@ jobs:
 
             filename=$(basename "$filepath")
             servicename="${filename%.jar}"
-            fulljar="~/microservices/${filename}"
+            final_jar="~/microservices/${filename}"
 
             echo "🔁 Restarting service: $servicename"
 
-            pid=$(pgrep -f "$fulljar")
+            pid=$(pgrep -f "$final_jar")
             if [ -n "$pid" ]; then
               echo "🛑 Stopping $servicename (PID: $pid)"
               kill "$pid"
               sleep 2
             fi
 
-            if [ -f "$filename" ]; then
+            if [ -f "$final_jar" ]; then
               echo "📦 Backing up old ${filename}"
-              mv "$filename" "Backup/${servicename}-${timestamp}.jar"
+              mv "$final_jar" "Backup/${servicename}-${timestamp}.jar"
             fi
 
             echo "📤 Moving updated jar to microservices root"
-            mv "upload/${filename}" "${filename}"
+            mv "upload/${filename}" "${final_jar}"
 
             echo "🚀 Starting ${filename}"
-            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
+            nohup java -jar "${final_jar}" > "${servicename}.log" 2>&1 &
 
             echo "✅ $servicename restarted"
           done
