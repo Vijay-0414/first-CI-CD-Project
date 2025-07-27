@@ -82,33 +82,52 @@ jobs:
         target: ~/microservices/upload
 
     # RUN SERVICES
-    - name: SSH and run apps
-    
+    - name: 🚀 SSH and Restart Updated Services
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
+          echo "🚀 Connected to EC2"
           cd ~/microservices
-          mkdir -p backup
-          for jar in upload/*.jar; do
-            name=$(basename "$jar")
-            base="${name%.*}"
-            timestamp=$(date +%Y%m%d_%H%M%S)
 
-            if [ -f "$base.jar"]; then  #Backup OLD Version if Exists
-              mv "$base.jar" "backup/${base}_${timestamp}.jar"
+          mkdir -p Backup
+
+          echo "📂 Listing JARs in Updated/"
+          ls -l Updated || echo "No JARs found"
+
+          timestamp=$(date +"%Y-%m-%d_%H-%M")
+
+          for filepath in upload/*.jar; do
+            [ -e "$filepath" ] || continue
+
+            filename=$(basename "$filepath")
+            servicename="${filename%.jar}"
+            fulljar="~/microservices/${filename}"
+
+            echo "🔁 Restarting service: $servicename"
+
+            pid=$(pgrep -f "$fulljar")
+            if [ -n "$pid" ]; then
+              echo "🛑 Stopping $servicename (PID: $pid)"
+              kill "$pid"
+              sleep 2
             fi
 
-            ls -tp backup/${base}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}  #Only keep latest 1 backup
-
-            if pgrep -f "$base.jar" > /dev/null; then  #Kill OLD Process
-              pkill -f "$base.jar"
+            if [ -f "$filename" ]; then
+              echo "📦 Backing up old ${filename}"
+              mv "$filename" "Backup/${servicename}-${timestamp}.jar"
             fi
 
-            mv "upload/$name" "$base.jar"  #Move jar file to main folder
+            echo "📤 Moving updated jar to microservices root"
+            mv "upload/${filename}" "${filename}"
 
-            nohup java -jar "$base.jar" > "${base}.log" 2>&1 &  #Start service
+            echo "🚀 Starting ${filename}"
+            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
+
+            echo "✅ $servicename restarted"
           done
-          
+
+          echo "🧹 Cleaning Updated folder"
+          rm -rf upload/*
