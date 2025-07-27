@@ -55,21 +55,21 @@ jobs:
     # COPY SELECTED FILES
     - name: Upload selected JARs to EC2
       run: |
-        mkdir Updated
+        mkdir upload
         if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
-          cp spring-petclinic-api-gateway/target/*.jar Updated/gateway.jar
+          cp spring-petclinic-api-gateway/target/*.jar upload/gateway.jar
         fi
         if [ "${{ inputs.deploy_customers }}" == "true" ]; then
-          cp spring-petclinic-customers-service/target/*.jar Updated/customers.jar
+          cp spring-petclinic-customers-service/target/*.jar upload/customers.jar
         fi
         if [ "${{ inputs.deploy_vets }}" == "true" ]; then
-          cp spring-petclinic-vets-service/target/*.jar Updated/vets.jar
+          cp spring-petclinic-vets-service/target/*.jar upload/vets.jar
         fi
         if [ "${{ inputs.deploy_visits }}" == "true" ]; then
-          cp spring-petclinic-visits-service/target/*.jar Updated/visits.jar
+          cp spring-petclinic-visits-service/target/*.jar upload/visits.jar
         fi
         if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
-          cp spring-petclinic-discovery-server/target/*.jar Updated/discovery.jar
+          cp spring-petclinic-discovery-server/target/*.jar upload/discovery.jar
         fi
 
     - name: SCP to EC2
@@ -78,8 +78,8 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        source: Updated/*
-        target: ~/Microservices/Updated
+        source: upload/*
+        target: ~/microservices
 
     # RUN SERVICES
     - name: SSH and run apps
@@ -90,23 +90,24 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          cd ~/Microservices
-          mkdir -p Backup
-          for jar in Updated/*.jar; do
+          cd ~/microservices
+          mkdir -p backup
+          for jar in upload/*.jar; do
             name=$(basename "$jar")
             base="${name%.*}"
+            timestamp=$(date +%Y%m%d_%H%M%S)
 
             if [ -f "$base.jar"]; then  #Backup OLD Version if Exists
-              mv "$base.jar" "Backup/${base}.jar"
+              mv "$base.jar" "backup/${base}_${timestamp}.jar"
             fi
 
-            ls -tp Backup/${base}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}  #Only keep latest 1 backup
+            ls -tp backup/${base}_*.jar 2>/dev/null | tail -n +2 | xargs -l {} rm -f {}  #Only keep latest 1 backup
 
             if pgrep -f "$base.jar" > /dev/null; then  #Kill OLD Process
               pkill -f "$base.jar"
             fi
 
-            mv "Updated/$name" "$base.jar"  #Move jar file to main folder
+            mv "upload/$name" "$base.jar"  #Move jar file to main folder
 
             nohup java -jar "$base.jar" > "${base}.log" 2>&1 &  #Start service
           done
