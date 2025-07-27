@@ -55,21 +55,21 @@ jobs:
     # COPY SELECTED FILES
     - name: Upload selected JARs to EC2
       run: |
-        mkdir upload
+        mkdir Updated
         if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
-          cp spring-petclinic-api-gateway/target/*.jar upload/gateway.jar
+          cp spring-petclinic-api-gateway/target/*.jar Updated/gateway.jar
         fi
         if [ "${{ inputs.deploy_customers }}" == "true" ]; then
-          cp spring-petclinic-customers-service/target/*.jar upload/customers.jar
+          cp spring-petclinic-customers-service/target/*.jar Updated/customers.jar
         fi
         if [ "${{ inputs.deploy_vets }}" == "true" ]; then
-          cp spring-petclinic-vets-service/target/*.jar upload/vets.jar
+          cp spring-petclinic-vets-service/target/*.jar Updated/vets.jar
         fi
         if [ "${{ inputs.deploy_visits }}" == "true" ]; then
-          cp spring-petclinic-visits-service/target/*.jar upload/visits.jar
+          cp spring-petclinic-visits-service/target/*.jar Updated/visits.jar
         fi
         if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
-          cp spring-petclinic-discovery-server/target/*.jar upload/discovery.jar
+          cp spring-petclinic-discovery-server/target/*.jar Updated/discovery.jar
         fi
 
     - name: SCP to EC2
@@ -78,56 +78,54 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        source: upload/*
-        target: ~/microservices
+        source: Updated/*
+        target: ~/Microservices
 
     # RUN SERVICES
-    - name: 🚀 SSH and Restart Updated Services
+    - name: SSH and deploy only updated services
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          echo "🚀 Connected to EC2"
-          cd ~/microservices
-
+          cd ~/Microservices
           mkdir -p Backup
 
-          echo "📂 Listing JARs in Updated/"
+          echo "Listing JARs in Updated/"
           ls -l Updated || echo "No JARs found"
 
           timestamp=$(date +"%Y-%m-%d_%H-%M")
 
-          for filepath in upload/*.jar; do
+          for filepath in Updated/*.jar; do
             [ -e "$filepath" ] || continue
 
             filename=$(basename "$filepath")
             servicename="${filename%.jar}"
-            final_jar="~/microservices/${filename}"
+            fulljar="~/Microservices/${filename}"
 
-            echo "🔁 Restarting service: $servicename"
+            echo "Restarting service: $servicename"
 
-            pid=$(pgrep -f "$final_jar")
+            pid=$(pgrep -f "$fulljar")
             if [ -n "$pid" ]; then
-              echo "🛑 Stopping $servicename (PID: $pid)"
+              echo "Stopping $servicename (PID: $pid)"
               kill "$pid"
               sleep 2
             fi
 
-            if [ -f "$final_jar" ]; then
-              echo "📦 Backing up old ${filename}"
-              mv "$final_jar" "Backup/${servicename}-${timestamp}.jar"
+            if [ -f "$filename" ]; then
+              echo "Backing up old ${filename}"
+              cp "$filename" "Backup/${servicename}-${timestamp}.jar"
             fi
 
-            echo "📤 Moving updated jar to microservices root"
-            mv "upload/${filename}" "${final_jar}"
+            echo "Moving updated jar to microservices root"
+            mv "Updated/${filename}" "${filename}"
 
-            echo "🚀 Starting ${filename}"
-            nohup java -jar "${final_jar}" > "${servicename}.log" 2>&1 &
+            echo "Starting ${filename}"
+            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
 
-            echo "✅ $servicename restarted"
+            echo "$servicename restarted"
           done
 
           echo "🧹 Cleaning Updated folder"
-          rm -rf upload/*
+          rm -rf Updated/*
