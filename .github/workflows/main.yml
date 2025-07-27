@@ -79,7 +79,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         source: upload/*
-        target: ~/microservices
+        target: ~/microservices/upload
 
     # RUN SERVICES
     - name: SSH and run apps
