@@ -23,6 +23,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      ECR_REGISTRY: 720628977237.dkr.ecr.us-east-1.amazonaws.com
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -52,71 +55,34 @@ jobs:
           cd spring-petclinic-discovery-server && mvn test && mvn package -DskipTests && cd ..
         fi
 
-    # COPY SELECTED FILES
-    - name: Upload selected JARs to Updated Folder
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key: ${{secrets.AWS_ACCESS_KEY}}
+        aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        aws-region: ${{secrets.AWS_REGION}}
+
+    - name: Build and Push Docker Images
       run: |
-        mkdir Updated
-        if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
-          cp spring-petclinic-api-gateway/target/*.jar Updated/gateway.jar
+        if [ "${{inputs.deploy_gateway}}" == "true" ]: then
+          docker build -t $ECR_REGISTRY/api-gateway spring-petclinic-api-gateway
+          docker push $ECR_REGISTRY/api-gateway
         fi
-        if [ "${{ inputs.deploy_customers }}" == "true" ]; then
-          cp spring-petclinic-customers-service/target/*.jar Updated/customers.jar
+          if [ "${{inputs.deploy_customers}}" == "true" ]: then
+          docker build -t $ECR_REGISTRY/customers-service spring-petclinic-customers-service
+          docker push $ECR_REGISTRY/customers-service
         fi
-        if [ "${{ inputs.deploy_vets }}" == "true" ]; then
-          cp spring-petclinic-vets-service/target/*.jar Updated/vets.jar
+        if [ "${{inputs.deploy_vets}}" == "true" ]: then
+          docker build -t $ECR_REGISTRY/vets-service spring-petclinic-vets-service
+          docker push $ECR_REGISTRY/vets-service
         fi
-        if [ "${{ inputs.deploy_visits }}" == "true" ]; then
-          cp spring-petclinic-visits-service/target/*.jar Updated/visits.jar
+        if [ "${{inputs.deploy_visits}}" == "true" ]: then
+          docker build -t $ECR_REGISTRY/visits-service spring-petclinic-visits-service
+          docker push $ECR_REGISTRY/visits-service
         fi
-        if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
-          cp spring-petclinic-discovery-server/target/*.jar Updated/discovery.jar
+        if [ "${{inputs.deploy_discovery}}" == "true" ]: then
+          docker build -t $ECR_REGISTRY/discovery-server spring-petclinic-discovery-server
+          docker push $ECR_REGISTRY/discovery-server
         fi
+        
 
-    - name: SCP to EC2
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_KEY }}
-        source: Updated/*
-        target: ~/Microservices
-
-    # RUN SERVICES
-    - name: SSH and deploy only updated services
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_KEY }}
-        script: |
-          cd ~/Microservices
-          mkdir -p Backup
-
-          ls -l Updated || echo "No JARs found"
-
-          for filepath in Updated/*.jar; do
-            [ -e "$filepath" ] || continue
-
-            filename=$(basename "$filepath")
-            servicename="${filename%.jar}"
-            fulljar="~/Microservices/${filename}"
-
-            pid=$(pgrep -f "$fulljar")
-            if [ -n "$pid" ]; then
-              echo "Stopping $servicename (PID: $pid)"
-              kill "$pid"
-              sleep 2
-            fi
-
-            if [ -f "$filename" ]; then
-              echo "Backing up old ${filename}"
-              cp "$filename" "Backup/${servicename}.jar"
-            fi
-
-            mv "Updated/${filename}" "${filename}"
-
-            nohup java -jar "${filename}" > "${servicename}.log" 2>&1 &
-
-          done
-
-          rm -rf Updated/*
