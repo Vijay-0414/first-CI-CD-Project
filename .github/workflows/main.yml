@@ -64,23 +64,23 @@ jobs:
 
     - name: Build and Push Docker Images
       run: |
-        if [ "${{inputs.deploy_gateway}}" == "true" ]: then
+        if [ "${{inputs.deploy_gateway}}" == "true" ]; then
           docker build -t $ECR_REGISTRY/api-gateway spring-petclinic-api-gateway
           docker push $ECR_REGISTRY/api-gateway
         fi
-          if [ "${{inputs.deploy_customers}}" == "true" ]: then
+          if [ "${{inputs.deploy_customers}}" == "true" ]; then
           docker build -t $ECR_REGISTRY/customers-service spring-petclinic-customers-service
           docker push $ECR_REGISTRY/customers-service
         fi
-        if [ "${{inputs.deploy_vets}}" == "true" ]: then
+        if [ "${{inputs.deploy_vets}}" == "true" ]; then
           docker build -t $ECR_REGISTRY/vets-service spring-petclinic-vets-service
           docker push $ECR_REGISTRY/vets-service
         fi
-        if [ "${{inputs.deploy_visits}}" == "true" ]: then
+        if [ "${{inputs.deploy_visits}}" == "true" ]; then
           docker build -t $ECR_REGISTRY/visits-service spring-petclinic-visits-service
           docker push $ECR_REGISTRY/visits-service
         fi
-        if [ "${{inputs.deploy_discovery}}" == "true" ]: then
+        if [ "${{inputs.deploy_discovery}}" == "true" ]; then
           docker build -t $ECR_REGISTRY/discovery-server spring-petclinic-discovery-server
           docker push $ECR_REGISTRY/discovery-server
         fi
