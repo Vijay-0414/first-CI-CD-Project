@@ -74,10 +74,10 @@ jobs:
           
     - name: Build and Push Docker Images
       run: |
+        
         if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
           docker build -t $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} spring-petclinic-api-gateway
-          docker push $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA}
-          docker tag $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} $ECR_REGISTRY/api-gateway:latest
+          docker push $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} 
           docker push $ECR_REGISTRY/api-gateway:latest
         fi
 
