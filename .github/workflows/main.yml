@@ -82,20 +82,29 @@ jobs:
         fi
 
         if [ "${{inputs.deploy_customers}}" == "true" ]; then
-          docker build -t $ECR_REGISTRY/customers-service spring-petclinic-customers-service
-          docker push $ECR_REGISTRY/customers-service
+          docker build -t $ECR_REGISTRY/customers-service:${COMMIT_SHORT_SHA} spring-petclinic-customers-service
+          docker push $ECR_REGISTRY/customers-service:${COMMIT_SHORT_SHA}
+          docker tag $ECR_REGISTRY/customers-service:${COMMIT_SHORT_SHA} $ECR_REGISTRY/customers-service:latest
+          docker push $ECR_REGISTRY/customers-service:latest
         fi
         if [ "${{inputs.deploy_vets}}" == "true" ]; then
-          docker build -t $ECR_REGISTRY/vets-service spring-petclinic-vets-service
-          docker push $ECR_REGISTRY/vets-service
+          docker build -t $ECR_REGISTRY/vets-service:${COMMIT_SHORT_SHA} spring-petclinic-vets-service
+          docker push $ECR_REGISTRY/vets-service:${COMMIT_SHORT_SHA}
+          docker tag $ECR_REGISTRY/vets-service:${COMMIT_SHORT_SHA} $ECR_REGISTRY/vets-service:latest
+          docker push $ECR_REGISTRY/vets-service:latest
+          
         fi
         if [ "${{inputs.deploy_visits}}" == "true" ]; then
-          docker build -t $ECR_REGISTRY/visits-service spring-petclinic-visits-service
-          docker push $ECR_REGISTRY/visits-service
+          docker build -t $ECR_REGISTRY/visits-service:${COMMIT_SHORT_SHA} spring-petclinic-visits-service
+          docker push $ECR_REGISTRY/visits-service:${COMMIT_SHORT_SHA}
+          docker tag $ECR_REGISTRY/visits-service:${COMMIT_SHORT_SHA} $ECR_REGISTRY/visits-service:latest
+          docker push $ECR_REGISTRY/visits-service:latest
         fi
         if [ "${{inputs.deploy_discovery}}" == "true" ]; then
-          docker build -t $ECR_REGISTRY/discovery-server spring-petclinic-discovery-server
-          docker push $ECR_REGISTRY/discovery-server
+          docker build -t $ECR_REGISTRY/discovery-server:${COMMIT_SHORT_SHA} spring-petclinic-discovery-server
+          docker push $ECR_REGISTRY/discovery-server:${COMMIT_SHORT_SHA}
+          docker tag $ECR_REGISTRY/discovery-server:${COMMIT_SHORT_SHA} $ECR_REGISTRY/discovery-server:latest
+          docker push $ECR_REGISTRY/discovery-server:latest
         fi
         
 
