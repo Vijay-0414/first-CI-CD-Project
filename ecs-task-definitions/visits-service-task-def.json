@@ -1,1 +1,22 @@
 
+
+{
+  "family": "visits-service-task-family",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "visits-service-container",
+      "image": "REPLACE_ME",
+      "portMappings": [
+        {
+          "containerPort": 8084,
+          "hostPort": 8084
+        }
+      ],
+      "essential": true
+    }
+  ]
+}
