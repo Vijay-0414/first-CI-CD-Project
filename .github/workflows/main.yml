@@ -23,9 +23,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    env:
-      ECR_REGISTRY: 720628977237.dkr.ecr.ap-south-1.amazonaws.com
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
