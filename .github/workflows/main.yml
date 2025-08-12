@@ -36,9 +36,17 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Set short commit SHA
+    - name: Set short git commit SHA
       id: vars
-      run: echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+      run: |
+        calculatedSha=$(git rev-parse --short ${{ github.sha }})
+        echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+
+    - name: Github Workspace
+      run: echo ${{ github.workspace }}
+
+    - name: Confirm git commit SHA output
+      run: echo ${{ env.COMMIT_SHORT_SHA }}
 
     # TEST + BUILD ONLY SELECTED SERVICES
     - name: Test & build selected services
@@ -75,16 +83,16 @@ jobs:
     - name: Build and Push Docker Images
       run: |  
         if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
-          docker build -t $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} spring-petclinic-api-gateway
-          docker push $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA}
-          docker tag $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} $ECR_REGISTRY/api-gateway:latest
+          docker build -t $ECR_REGISTRY/api-gateway:${{ env.COMMIT_SHORT_SHA }} spring-petclinic-api-gateway
+          docker push $ECR_REGISTRY/api-gateway:${{ env.COMMIT_SHORT_SHA }}
+          docker tag $ECR_REGISTRY/api-gateway:${{ env.COMMIT_SHORT_SHA }} $ECR_REGISTRY/api-gateway:latest
           docker push $ECR_REGISTRY/api-gateway:latest
         fi
 
         if [ "${{inputs.deploy_customers}}" == "true" ]; then
-          docker build -t $ECR_REGISTRY/customers-service:${COMMIT_SHORT_SHA} spring-petclinic-customers-service
-          docker push $ECR_REGISTRY/customers-service:${COMMIT_SHORT_SHA}
-          docker tag $ECR_REGISTRY/customers-service:${COMMIT_SHORT_SHA} $ECR_REGISTRY/customers-service:latest
+          docker build -t $ECR_REGISTRY/customers-service:${{ env.COMMIT_SHORT_SHA }} spring-petclinic-customers-service
+          docker push $ECR_REGISTRY/customers-service:${{ env.COMMIT_SHORT_SHA }}
+          docker tag $ECR_REGISTRY/customers-service:${{ env.COMMIT_SHORT_SHA }} $ECR_REGISTRY/customers-service:latest
           docker push $ECR_REGISTRY/customers-service:latest
         fi
         if [ "${{inputs.deploy_vets}}" == "true" ]; then
