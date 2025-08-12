@@ -1,1 +1,21 @@
 
+{
+  "family": "customers-service-task-family",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "customers-service-container",
+      "image": "REPLACE_ME",
+      "portMappings": [
+        {
+          "containerPort": 8081,
+          "hostPort": 8081
+        }
+      ],
+      "essential": true
+    }
+  ]
+}
