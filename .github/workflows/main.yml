@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ECR_REGISTRY: 720628977237.dkr.ecr.us-east-1.amazonaws.com
+      ECR_REGISTRY: 720628977237.dkr.ecr.ap-south-1.amazonaws.com
 
     steps:
     - name: Checkout repository
@@ -35,6 +35,10 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '17'
+
+    - name: Set short commit SHA
+      id: vars
+      run: echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
 
     # TEST + BUILD ONLY SELECTED SERVICES
     - name: Test & build selected services
@@ -70,11 +74,14 @@ jobs:
           
     - name: Build and Push Docker Images
       run: |
-        if [ "${{inputs.deploy_gateway}}" == "true" ]; then
-          docker build -t $ECR_REGISTRY/api-gateway spring-petclinic-api-gateway
-          docker push $ECR_REGISTRY/api-gateway
+        if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
+          docker build -t $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} spring-petclinic-api-gateway
+          docker push $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA}
+          docker tag $ECR_REGISTRY/api-gateway:${COMMIT_SHORT_SHA} $ECR_REGISTRY/api-gateway:latest
+          docker push $ECR_REGISTRY/api-gateway:latest
         fi
-          if [ "${{inputs.deploy_customers}}" == "true" ]; then
+
+        if [ "${{inputs.deploy_customers}}" == "true" ]; then
           docker build -t $ECR_REGISTRY/customers-service spring-petclinic-customers-service
           docker push $ECR_REGISTRY/customers-service
         fi
@@ -91,4 +98,5 @@ jobs:
           docker push $ECR_REGISTRY/discovery-server
         fi
         
+
 
