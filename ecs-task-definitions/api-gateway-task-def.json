@@ -1,1 +1,21 @@
 
+{
+  "family": "api-gateway-task-family",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "api-gateway-container",
+      "image": "REPLACE_ME",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080
+        }
+      ],
+      "essential": true
+    }
+  ]
+}
