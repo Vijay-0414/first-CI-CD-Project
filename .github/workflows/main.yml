@@ -157,8 +157,8 @@ jobs:
           TASK_NAME=gateway-task
         
           echo "Update and Register Task Definition"
-        
-          sed "s|REPLACE_ME|${ECR_REGISTRY}/api-gateway:${env.COMMIT_SHORT_SHA}|g" ecs-task-definitions/api-gateway-task-def.json > final-task-def.json
+          
+          sed "s|REPLACE_ME|${{ secrets.ECR_REGISTRY }}/api-gateway:${{ env.COMMIT_SHORT_SHA }}|g" ecs-task-definitions/api-gateway-task-def.json > final-task-def.json
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://final-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
         
           echo "Deregistering OLD Task Definition"
