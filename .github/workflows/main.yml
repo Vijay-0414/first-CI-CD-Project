@@ -149,49 +149,50 @@ jobs:
           echo "EC2 container instances already running."
         fi
 
-    - name: Deploy to ECS - API Gateway
-      if: inputs.deploy_gateway == 'true'
-      run: |
-        SERVICE_NAME=gateway-service
-        TASK_NAME=gateway-task
-        
-        echo "Update and Register Task Definition"
-        
-        sed "s|REPLACE_ME|${ECR_REGISTRY}/api-gateway:${env.COMMIT_SHORT_SHA}|g" ecs-task-definitions/api-gateway-task-def.json > final-task-def.json
-        TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://final-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
-        
-        echo "Deregistering OLD Task Definition"
-        
-        OLD_REVISIONS=$(aws ecs list-task-definitions --family-prefix $TASK_NAME --status ACTIVE --sort DESC --query 'taskDefinitionArns[1:]' --output text)
+    - name: Build and Push Docker Images
+      run: |  
 
-        for TD_ARN in $OLD_REVISIONS; do
-          echo "Deregistering $TD_ARN"
-          aws ecs deregister-task-definition --task-definition $TD_ARN
-        done
+        if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
+          SERVICE_NAME=gateway-service
+          TASK_NAME=gateway-task
         
-        echo "Stop Existing Service Task or Creating New Service"
+          echo "Update and Register Task Definition"
         
-        SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query "services[0].status" --output text 2>/dev/null || echo "MISSING")
+          sed "s|REPLACE_ME|${ECR_REGISTRY}/api-gateway:${env.COMMIT_SHORT_SHA}|g" ecs-task-definitions/api-gateway-task-def.json > final-task-def.json
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://final-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
+        
+          echo "Deregistering OLD Task Definition"
+        
+          OLD_REVISIONS=$(aws ecs list-task-definitions --family-prefix $TASK_NAME --status ACTIVE --sort DESC --query 'taskDefinitionArns[1:]' --output text)
 
-        if [ "$SERVICE_STATUS" == "ACTIVE" ]; then
-          echo "Service exists. Checking for running tasks..."
-          TASK_ARN=$(aws ecs list-tasks --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --query 'taskArns[0]' --output text)
+          for TD_ARN in $OLD_REVISIONS; do
+            echo "Deregistering $TD_ARN"
+            aws ecs deregister-task-definition --task-definition $TD_ARN
+          done
+        
+          echo "Stop Existing Service Task or Creating New Service"
+        
+          SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query "services[0].status" --output text 2>/dev/null || echo "MISSING")
 
-          if [ "$TASK_ARN" != "None" ] && [ "$TASK_ARN" != "null" ]; then
-            echo "Stopping task: $TASK_ARN"
-            aws ecs stop-task --cluster $CLUSTER_NAME --task $TASK_ARN
+          if [ "$SERVICE_STATUS" == "ACTIVE" ]; then
+            echo "Service exists. Checking for running tasks..."
+            TASK_ARN=$(aws ecs list-tasks --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --query 'taskArns[0]' --output text)
+
+            if [ "$TASK_ARN" != "None" ] && [ "$TASK_ARN" != "null" ]; then
+              echo "Stopping task: $TASK_ARN"
+              aws ecs stop-task --cluster $CLUSTER_NAME --task $TASK_ARN
+            else
+              echo "No running tasks found for service."
+            fi
           else
-            echo "No running tasks found for service."
+            echo "Creating ECS service..."
+            aws ecs create-service --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --task-definition $TASK_DEF_ARN --desired-count 1 --launch-type EC2 --deployment-configuration maximumPercent=200,minimumHealthyPercent=50
           fi
-        else
-          echo "Creating ECS service..."
-          aws ecs create-service --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --task-definition $TASK_DEF_ARN --desired-count 1 --launch-type EC2 --deployment-configuration maximumPercent=200,minimumHealthyPercent=50
+        
+          echo "Updating the Service"
+        
+          aws ecs update-service --cluster $CLUSTER_NAME --service api-gateway-service --task-definition $TASK_DEF_ARN --force-new-deployment
         fi
-        
-        echo "Updating the Service"
-        
-        aws ecs update-service --cluster $CLUSTER_NAME --service api-gateway-service --task-definition $TASK_DEF_ARN --force-new-deployment
-
 
 
 
