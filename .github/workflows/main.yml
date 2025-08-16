@@ -20,7 +20,7 @@ on:
         default: false
 
 env:
-  CLUSTER_NAME: demo-cluster
+  CLUSTER_NAME: Micro-cluster
 
 jobs:
   deploy:
