@@ -149,10 +149,10 @@ jobs:
           echo "EC2 container instances already running."
         fi
 
-    - name: Build and Push Docker Images
-      run: |  
-
+    - name: Task Creation
+      run: |
         if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
+        
           SERVICE_NAME=gateway-service
           TASK_NAME=gateway-task
         
