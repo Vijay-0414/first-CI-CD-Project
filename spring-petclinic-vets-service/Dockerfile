@@ -8,4 +8,4 @@ COPY ${JAR_FILE} vets-service.jar
 
 EXPOSE 8083
 
-ENTRYPOINT ["java", "-jar", "/vets-service.jar"]
+ENTRYPOINT ["java", "-jar", "vets-service.jar"]
