@@ -137,7 +137,7 @@ jobs:
           aws ec2 run-instances \
             --image-id $AMI_ID \
             --count 1 \
-            --instance-type t3.micro \
+            --instance-type t3.medium \
             --iam-instance-profile Name=ecsInstanceRole \
             --key-name my-key \
             --security-group-ids sg-0abb4251606ddb157 \
@@ -229,7 +229,7 @@ jobs:
             fi
           else
             echo "Creating ECS service..."
-            aws ecs create-service --cluster $CLUSTER_NAME --service-name vets-service --task-definition $TASK_DEF_ARN --desired-count 1 --launch-type EC2 --deployment-configuration maximumPercent=200,minimumHealthyPercent=50
+            aws ecs create-service --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --task-definition $TASK_DEF_ARN --desired-count 1 --launch-type EC2 --deployment-configuration maximumPercent=200,minimumHealthyPercent=50
           fi
         
           echo "Updating the Service"
@@ -277,7 +277,7 @@ jobs:
         
           echo "Updating the Service"
         
-          aws ecs update-service --cluster $CLUSTER_NAME --service api-gateway-service --task-definition $TASK_DEF_ARN --force-new-deployment
+          aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEF_ARN --force-new-deployment
         fi
 
         if [ "${{ inputs.deploy_visits }}" = "true" ]; then
