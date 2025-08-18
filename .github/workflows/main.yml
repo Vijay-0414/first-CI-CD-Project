@@ -151,7 +151,7 @@ jobs:
 
     - name: Task Creation
       run: |
-        if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
+        if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
         
           SERVICE_NAME=gateway-service
           TASK_NAME=gateway-task
@@ -194,7 +194,7 @@ jobs:
           aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEF_ARN --force-new-deployment
         fi
 
-        if [ "${{ inputs.deploy_vets }}" = "true" ]; then
+        if [ "${{ inputs.deploy_vets }}" == "true" ]; then
         
           SERVICE_NAME=vets-service
           TASK_NAME=vets-task
@@ -237,7 +237,7 @@ jobs:
           aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEF_ARN --force-new-deployment
         fi
 
-        if [ "${{ inputs.deploy_customers }}" = "true" ]; then
+        if [ "${{ inputs.deploy_customers }}" == "true" ]; then
         
           SERVICE_NAME=customers-service
           TASK_NAME=customers-task
@@ -280,7 +280,7 @@ jobs:
           aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEF_ARN --force-new-deployment
         fi
 
-        if [ "${{ inputs.deploy_visits }}" = "true" ]; then
+        if [ "${{ inputs.deploy_visits }}" == "true" ]; then
         
           SERVICE_NAME=visits-service
           TASK_NAME=visits-task
@@ -323,7 +323,7 @@ jobs:
           aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEF_ARN --force-new-deployment
         fi
 
-        if [ "${{ inputs.deploy_discovery }}" = "true" ]; then
+        if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
         
           SERVICE_NAME=discovery-service
           TASK_NAME=discovery-task
