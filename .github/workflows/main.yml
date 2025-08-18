@@ -85,8 +85,8 @@ jobs:
       run: |  
         build_push() {
           local SERVICE=$1
-          local PATH=$2
-          docker build -t ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }} $PATH
+          local SERVICE_PATH=$2
+          docker build -t ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }} $SERVICE_PATH
           docker push ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }}
           docker tag ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }} ${{ secrets.ECR_REGISTRY }}/$SERVICE:latest
           docker push ${{ secrets.ECR_REGISTRY }}/$SERVICE:latest        
