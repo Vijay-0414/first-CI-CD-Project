@@ -98,22 +98,22 @@ jobs:
           docker push ${{ secrets.ECR_REGISTRY }}/customers-service:latest
         fi
         if [ "${{inputs.deploy_vets}}" == "true" ]; then
-          docker build -t ${{ secrets.ECR_REGISTRY }}/vets-service:${COMMIT_SHORT_SHA} spring-petclinic-vets-service
-          docker push ${{ secrets.ECR_REGISTRY }}/vets-service:${COMMIT_SHORT_SHA}
-          docker tag ${{ secrets.ECR_REGISTRY }}/vets-service:${COMMIT_SHORT_SHA} ${{ secrets.ECR_REGISTRY }}/vets-service:latest
+          docker build -t ${{ secrets.ECR_REGISTRY }}/vets-service:${{ env.COMMIT_SHORT_SHA }} spring-petclinic-vets-service
+          docker push ${{ secrets.ECR_REGISTRY }}/vets-service:${{ env.COMMIT_SHORT_SHA }}
+          docker tag ${{ secrets.ECR_REGISTRY }}/vets-service:${{ env.COMMIT_SHORT_SHA }} ${{ secrets.ECR_REGISTRY }}/vets-service:latest
           docker push ${{ secrets.ECR_REGISTRY }}/vets-service:latest
           
         fi
         if [ "${{inputs.deploy_visits}}" == "true" ]; then
-          docker build -t ${{ secrets.ECR_REGISTRY }}/visits-service:${COMMIT_SHORT_SHA} spring-petclinic-visits-service
-          docker push ${{ secrets.ECR_REGISTRY }}/visits-service:${COMMIT_SHORT_SHA}
-          docker tag ${{ secrets.ECR_REGISTRY }}/visits-service:${COMMIT_SHORT_SHA} ${{ secrets.ECR_REGISTRY }}/visits-service:latest
+          docker build -t ${{ secrets.ECR_REGISTRY }}/visits-service:${{ env.COMMIT_SHORT_SHA }} spring-petclinic-visits-service
+          docker push ${{ secrets.ECR_REGISTRY }}/visits-service:${{ env.COMMIT_SHORT_SHA }}
+          docker tag ${{ secrets.ECR_REGISTRY }}/visits-service:${{ env.COMMIT_SHORT_SHA }} ${{ secrets.ECR_REGISTRY }}/visits-service:latest
           docker push ${{ secrets.ECR_REGISTRY }}/visits-service:latest
         fi
         if [ "${{inputs.deploy_discovery}}" == "true" ]; then
-          docker build -t ${{ secrets.ECR_REGISTRY }}/discovery-server:${COMMIT_SHORT_SHA} spring-petclinic-discovery-server
-          docker push ${{ secrets.ECR_REGISTRY }}/discovery-server:${COMMIT_SHORT_SHA}
-          docker tag ${{ secrets.ECR_REGISTRY }}/discovery-server:${COMMIT_SHORT_SHA} ${{ secrets.ECR_REGISTRY }}/discovery-server:latest
+          docker build -t ${{ secrets.ECR_REGISTRY }}/discovery-server:${{ env.COMMIT_SHORT_SHA }} spring-petclinic-discovery-server
+          docker push ${{ secrets.ECR_REGISTRY }}/discovery-server:${{ env.COMMIT_SHORT_SHA }}
+          docker tag ${{ secrets.ECR_REGISTRY }}/discovery-server:${{ env.COMMIT_SHORT_SHA }} ${{ secrets.ECR_REGISTRY }}/discovery-server:latest
           docker push ${{ secrets.ECR_REGISTRY }}/discovery-server:latest
         fi
         
