@@ -77,33 +77,31 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       run: |
-        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-          docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
           
     - name: Build and Push Docker Images
       run: |  
         build_push() {
           local SERVICE=$1
           local PATH=$2
-          
           docker build -t ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }} $PATH
           docker push ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }}
           docker tag ${{ secrets.ECR_REGISTRY }}/$SERVICE:${{ env.COMMIT_SHORT_SHA }} ${{ secrets.ECR_REGISTRY }}/$SERVICE:latest
           docker push ${{ secrets.ECR_REGISTRY }}/$SERVICE:latest        
         }
 
-        if [ "${{ inputs.deploy_gateway }}" = "true" ]; then
+        if [ "${{ inputs.deploy_gateway }}" == "true" ]; then
           build_push api-gateway spring-petclinic-api-gateway
         fi
-        if [ "${{ inputs.deploy_customers }}" = "true" ]; then
+        if [ "${{ inputs.deploy_customers }}" == "true" ]; then
           build_push customers-service spring-petclinic-customers-service
         fi
-        if [ "${{ inputs.deploy_vets }}" = "true" ]; then
+        if [ "${{ inputs.deploy_vets }}" == "true" ]; then
           build_push vets-service spring-petclinic-vets-service
         fi
-        if [ "${{ inputs.deploy_visits }}" = "true" ]; then
+        if [ "${{ inputs.deploy_visits }}" == "true" ]; then
           build_push visits-service spring-petclinic-visits-service
         fi
-        if [ "${{ inputs.deploy_discovery }}" = "true" ]; then
+        if [ "${{ inputs.deploy_discovery }}" == "true" ]; then
           build_push discovery-server spring-petclinic-discovery-server
         fi        
