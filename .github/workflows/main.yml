@@ -330,7 +330,7 @@ jobs:
         
           echo "Update and Register Task Definition"
           
-          sed "s|REPLACE_ME|${{ secrets.ECR_REGISTRY }}/discovery-service:${{ env.COMMIT_SHORT_SHA }}|g" ecs-task-definitions/discovery-service-task-def.json > final-task-def.json
+          sed "s|REPLACE_ME|${{ secrets.ECR_REGISTRY }}/discovery-service:${{ env.COMMIT_SHORT_SHA }}|g" ecs-task-definitions/discovery-server-task-def.json > final-task-def.json
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://final-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
         
           echo "Deregistering OLD Task Definition"
